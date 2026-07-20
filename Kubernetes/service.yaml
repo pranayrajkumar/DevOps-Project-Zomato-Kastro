@@ -4,11 +4,19 @@ metadata:
   name: zomato
   labels:
     app: zomato
+    version: v1
 spec:
-  type: NodePort
-  ports:
-  - port: 3000
-    targetPort: 3000
-    nodePort: 30001
+  type: LoadBalancer
   selector:
     app: zomato
+    version: v1
+  ports:
+  - protocol: TCP
+    targetPort: 3000
+    Port: 80
+    targetport: 5000
+ 
+
+
+
+   
