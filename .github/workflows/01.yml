@@ -1,4 +1,4 @@
-name: Deploy BLUE (v1)
+name: Zomato (v1)
 
 on:
   workflow_dispatch:
