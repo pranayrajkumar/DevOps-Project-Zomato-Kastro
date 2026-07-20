@@ -12,11 +12,8 @@ spec:
     version: v1
   ports:
   - protocol: TCP
-    targetPort: 3000
     Port: 80
-    targetport: 5000
+    targetPort: 5000
  
 
 
-
-   
