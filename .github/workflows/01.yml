@@ -1,4 +1,4 @@
- name: Zomato
+name: Zomato
 
 on:
   workflow_dispatch:
