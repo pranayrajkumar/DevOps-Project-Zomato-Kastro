@@ -17,5 +17,6 @@ spec:
       containers:
       - name: zomato
         image: bpranayraj/zomato:v1
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
