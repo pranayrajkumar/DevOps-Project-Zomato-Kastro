@@ -23,5 +23,5 @@ jobs:
 
     - name: Deploy Zomato to EKS
       run: |
-        kubectl apply -f k8s/deployment.yaml
-        kubectl apply -f k8s/node-service.yaml
+        kubectl apply -f Kubernetes/deployment.yaml
+        kubectl apply -f Kubernetes/node-service.yaml
