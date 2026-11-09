@@ -18,8 +18,8 @@ jobs:
 
     - name: Build & Push Image
       run: |
-        docker build -t bpranayraj/zomato:v2 .
-        docker push bpranayraj/zomato:v2
+        docker build -t bpranayraj/zomato:v1 .
+        docker push bpranayraj/zomato:v1
 
     - name: Deploy Zomato to EKS
       run: |
