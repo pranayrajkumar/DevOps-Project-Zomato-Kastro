@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: zomato-service
 spec:
-type: LoadBalancer
+  type: LoadBalancer
   selector:
-      app: zomato
-      version: v1
+    app: zomato
   ports:
-    - port: 80
+    - protocol: TCP
+      port: 80
       targetPort: 5000
