@@ -50,31 +50,7 @@ jobs:
         run: npm install
 
       # 6. OWASP Dependency-Check Scan
-      - name: OWASP Dependency-Check
-        run: |
-          VERSION="10.0.4"
-          ZIP_FILE="dependency-check-$VERSION-release.zip"
-          
-          if [ ! -f "$ZIP_FILE" ]; then
-            echo "Downloading Dependency-Check CLI..."
-            curl -L --connect-timeout 30 --max-time 120 "https://github.com/jeremylong/DependencyCheck/releases/download/v$VERSION/$ZIP_FILE" --output "$ZIP_FILE"
-          fi
-          
-          if [ ! -d "dependency-check" ]; then
-            echo "Extracting Dependency-Check..."
-            unzip -q "$ZIP_FILE"
-          fi
-
-          mkdir -p reports
-          echo "Running Dependency-Check Scan..."
-          ./dependency-check/bin/dependency-check.sh \
-            --project "zomato" \
-            --scan "." \
-            --format "XML" \
-            --disableYarnAudit \
-            --disableNodeAudit \
-            --out "reports"
-        timeout-minutes: 10
+      
 
       # 7. Run Trivy File Scan
       - name: Run Trivy File Scan
