@@ -73,7 +73,6 @@ jobs:
             --format "XML" \
             --disableYarnAudit \
             --disableNodeAudit \
-            --nvdWaitTime 30 \
             --out "reports"
         timeout-minutes: 10
 
