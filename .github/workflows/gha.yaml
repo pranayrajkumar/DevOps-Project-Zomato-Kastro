@@ -51,14 +51,18 @@ jobs:
 
       # 6. OWASP Dependency-Check Scan
       - name: OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'zomato'
-          path: '.'
-          format: 'XML'
-          args: >
-            --disableYarnAudit
-            --disableNodeAudit
+        run: |
+          # Download and run Dependency-Check command-line tool directly on the runner
+          VERSION="10.0.4" # Or your preferred version
+          curl -Ls "https://github.com/jeremylong/DependencyCheck/releases/download/v$VERSION/dependency-check-$VERSION-release.zip" --output dependency-check.zip
+          unzip -q dependency-check.zip
+          ./dependency-check/bin/dependency-check.sh \
+            --project "zomato" \
+            --scan "." \
+            --format "XML" \
+            --disableYarnAudit \
+            --disableNodeAudit \
+            --out "reports"
 
       # 7. Trivy File Scan (Requires Trivy installed on the self-hosted host, or use trivy-action)
       - name: Run Trivy File Scan
@@ -109,24 +113,112 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
+          secure: true
           username: ${{ secrets.GMAIL_USER }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           subject: "Build Status: ${{ job.status }} - ${{ github.job }}"
           to: bprk1996@gmail.com
           from: ${{ secrets.GMAIL_USER }}
+          attachments: trivy.txt
+          ignore_missing_attachments: true
           html_body: |
+            <!DOCTYPE html>
             <html>
-            <body>
-                <div style="background-color: #FFA07A; padding: 10px; margin-bottom: 10px;">
-                    <p style="color: white; font-weight: bold;">Repository: ${{ github.repository }}</p>
-                </div>
-                <div style="background-color: #90EE90; padding: 10px; margin-bottom: 10px;">
-                    <p style="color: white; font-weight: bold;">Build Number: ${{ github.run_number }}</p>
-                </div>
-                <div style="background-color: #87CEEB; padding: 10px; margin-bottom: 10px;">
-                    <p style="color: white; font-weight: bold;">Workflow Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}</p>
-                </div>
-                <p><b>Status:</b> ${{ job.status }}</p>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f6f8; padding: 32px 16px;">
+                <tr>
+                  <td align="center">
+                    <!-- Main Card -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                      
+                      <!-- Header Banner -->
+                      <tr>
+                        <td style="background-color: #111827; padding: 24px 32px;">
+                          <p style="margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af;">
+                            GitHub Actions Notification
+                          </p>
+                          <h1 style="margin: 6px 0 0 0; font-size: 20px; font-weight: 700; color: #ffffff;">
+                            ${{ github.workflow }}
+                          </h1>
+                        </td>
+                      </tr>
+
+                      <!-- Body Content -->
+                      <tr>
+                        <td style="padding: 28px 32px;">
+                          <!-- Dynamic Status Badge (Green on Success, Red on Failure) -->
+                          <div style="margin-bottom: 24px;">
+                            <span style="display: inline-block; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 9999px; background-color: ${{ job.status == 'success' && '#dcfce7' || '#fee2e2' }}; color: ${{ job.status == 'success' && '#166534' || '#991b1b' }}; text-transform: uppercase; letter-spacing: 0.05em;">
+                              Status: ${{ job.status }}
+                            </span>
+                          </div>
+
+                          <!-- Details Table -->
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; margin-bottom: 28px;">
+                            <tr>
+                              <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #6b7280; width: 35%;">
+                                Repository
+                              </td>
+                              <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; font-weight: 600; color: #111827; text-align: right;">
+                                ${{ github.repository }}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #6b7280;">
+                                Job Name
+                              </td>
+                              <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; font-weight: 600; color: #111827; text-align: right;">
+                                ${{ github.job }}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #6b7280;">
+                                Build Number
+                              </td>
+                              <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; font-weight: 600; color: #111827; text-align: right;">
+                                #${{ github.run_number }}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 12px 0; font-size: 14px; color: #6b7280;">
+                                Branch
+                              </td>
+                              <td style="padding: 12px 0; font-size: 14px; font-weight: 600; color: #111827; text-align: right;">
+                                ${{ github.ref_name }}
+                              </td>
+                            </tr>
+                          </table>
+
+                          <!-- Action Button -->
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 8px;">
+                                  View Workflow Run
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- Footer -->
+                      <tr>
+                        <td style="background-color: #f9fafb; padding: 16px 32px; border-top: 1px solid #e5e7eb; text-align: center;">
+                          <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                            Trivy scan report attached (if generated) • Automated CI/CD Alert
+                          </p>
+                        </td>
+                      </tr>
+
+                    </table>
+                  </td>
+                </tr>
+              </table>
             </body>
             </html>
-          attachments: trivy.txt
+
