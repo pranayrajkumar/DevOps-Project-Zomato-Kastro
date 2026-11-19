@@ -77,15 +77,7 @@ jobs:
           docker tag zomato ${{ secrets.DOCKERHUB_USERNAME }}/zomato:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/zomato:latest
 
-      # 10. Docker Scout Analysis
-      - name: Run Docker Scout
-        uses: docker/scout-action@v1
-        with:
-          command: 'quickview,cves,recommendations'
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/zomato:latest
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          sarif-file: 'docker-scout-results.sarif'
+     
 
       # 11. Deploy to Local Container
       - name: Deploy to Container
