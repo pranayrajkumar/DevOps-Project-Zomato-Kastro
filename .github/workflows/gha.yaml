@@ -1,4 +1,4 @@
-name: Zomato-complete projects
+name: Zomato-complete project
 
 on:
   push:
