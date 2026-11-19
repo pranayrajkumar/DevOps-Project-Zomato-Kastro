@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Self-Hosted Runner
+name: Zomato-complete project
 
 on:
   push:
