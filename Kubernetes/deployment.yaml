@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: zomato
-        image: bpranayraj/zomato:build-13-f8af95e2d3967d70775de60df9d2b8a77a7c8fba
+        image: bpranayraj/zomato:build-14-f6f708f733ff6786954cf8b319ffa0eb609d6f7a
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
