@@ -13,11 +13,23 @@ jobs:
   build-and-deploy:
     runs-on: self-hosted
 
+    env:
+      TMPDIR: /tmp
+      NPM_CONFIG_CACHE: /tmp/npm-cache
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
+
+      # Pre-build disk cleanup while 2.8 GB is tight
+      - name: Free Disk Space Before Build
+        run: |
+          rm -rf /tmp/npm-cache /tmp/trivy-cache "${{ runner.temp }}/*"
+          docker system prune -af --volumes 2>/dev/null || true
+          docker builder prune -af 2>/dev/null || true
+          df -h / /tmp
 
       # 1. Setup Java 17 for SonarQube
       - name: Set up JDK 17
@@ -50,9 +62,11 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # 5. Install NPM Dependencies
+      # 5. Install NPM Dependencies (with cache redirected to /tmp and cleaned after)
       - name: Install NPM Dependencies
-        run: npm install
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund
+          rm -rf /tmp/npm-cache ~/.npm
 
       # 6. Run Trivy File Scan
       - name: Run Trivy File Scan
@@ -63,16 +77,17 @@ jobs:
           format: 'table'
           output: 'trivy.txt'
 
-      # 7. Clean Up Previous Local Zomato Images and Build Cache
-      - name: Clean Up Previous Local Images
+      # 7. Remove Previous Local Zomato Images & Prune Cache Before Building
+      - name: Clean Up Previous Local Images Before Build
         run: |
-          OLD_IMAGES=$(docker images -q zomato "${{ secrets.DOCKERHUB_USERNAME }}/zomato" | sort -u)
+          OLD_IMAGES=$(docker images -q zomato "${{ secrets.DOCKERHUB_USERNAME }}/zomato" 2>/dev/null | sort -u)
           if [ -n "$OLD_IMAGES" ]; then
             docker rmi -f $OLD_IMAGES
           fi
-          docker builder prune -f
+          docker builder prune -af
+          docker image prune -f
 
-      # 8. Build, Tag (Per-Run Tag + Latest), and Push Docker Image
+      # 8. Build, Tag (Unique Per-Run Tag + Latest), and Push Docker Image
       - name: Build, Tag, and Push Docker Image
         env:
           IMAGE_TAG: "build-${{ github.run_number }}-${{ github.sha }}"
@@ -85,6 +100,10 @@ jobs:
           docker push "${{ secrets.DOCKERHUB_USERNAME }}/zomato:${IMAGE_TAG}"
           docker push "${{ secrets.DOCKERHUB_USERNAME }}/zomato:latest"
 
+          # Remove local build/pushed images immediately after pushing to free /var/lib/docker & containerd
+          docker rmi -f zomato "${{ secrets.DOCKERHUB_USERNAME }}/zomato:${IMAGE_TAG}" "${{ secrets.DOCKERHUB_USERNAME }}/zomato:latest" 2>/dev/null || true
+          docker builder prune -af
+
       # 9. Update Image Tag in Kubernetes Manifests for Argo CD (Push / Merge Only)
       - name: Update Kubernetes Manifest Image Tag for Argo CD
         if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
@@ -95,7 +114,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Replace any existing image reference for this repo in Kubernetes/*.yaml or *.yml
           find Kubernetes -type f \( -name "*.yaml" -o -name "*.yml" \) -exec sed -i "s|${IMAGE_REPO}:[^\"'[:space:]]*|${IMAGE_REPO}:${IMAGE_TAG}|g" {} +
 
           if ! git diff --quiet; then
@@ -106,7 +124,13 @@ jobs:
             echo "No Kubernetes manifest changes to commit."
           fi
 
-      # 10. Email Notification (Runs always)
+      # 10. Clean Heavy Workspace Directories Before Email (Keeps trivy.txt intact for attachment)
+      - name: Clean Heavy Build Artifacts Before Notification
+        if: always()
+        run: |
+          rm -rf node_modules build dist .scannerwork /tmp/npm-cache ~/.cache/trivy 2>/dev/null || true
+
+      # 11. Email Notification (Runs always)
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
         if: always()
@@ -222,11 +246,10 @@ jobs:
             </body>
             </html>
 
-      # 11. Post-Job Cleanup (Runs after email so trivy.txt is preserved until sent)
-      - name: Clean Up Runner Workspace and Docker Cache
+      # 12. Final Cleanup After Email (Removes trivy.txt and /tmp scratch files)
+      - name: Final Cleanup After Notification
         if: always()
         run: |
-          docker image prune -f
-          docker builder prune -f
           rm -f trivy.txt
-          rm -rf "${{ github.workspace }}/node_modules" "${{ github.workspace }}/build" "${{ github.workspace }}/.scannerwork"
+          rm -rf /tmp/npm-cache "${{ runner.temp }}/*" 2>/dev/null || true
+          df -h / /tmp
